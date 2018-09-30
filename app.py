@@ -72,5 +72,19 @@ async def create_task(request):
     return json({'errors': errors}, status=status_code)
 
 
+@app.route('todo/tasks/<task_id:int>', methods=['DELETE'])
+async def delete_task(request, task_id):
+    errors = ''
+    status_code = 202
+    async with app.engine.acquire() as conn:
+        try:
+            await conn.execute(Tasks.delete().where(Tasks.c.id == task_id))
+            await conn.connection.commit()
+        except pymysql.Error as err:
+            errors = err.args[1]
+            status_code = 400
+    return json({'errors': errors}, status_code)
+
+
 if __name__ == '__main__':
     app.run(host='localhost', port=8000)
