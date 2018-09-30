@@ -6,7 +6,7 @@ from aiomysql.sa import create_engine
 import pymysql
 from marshmallow import ValidationError
 
-from forms import TaskForm
+from forms import TaskForm, TaskUpdateForm
 from models import Tasks
 
 
@@ -35,16 +35,21 @@ async def get_tasks(request):
         data = await result.fetchall()
         if data:
             tasks = [dict(task) for task in data]
-
+        else:
+            raise sanic.exceptions.abort(404)
     return json({'tasks': tasks})
 
 
 @app.route('/todo/tasks/<task_id:int>', methods=['GET'])
 async def get_task_by_id(request, task_id):
+    task = None
     async with app.engine.acquire() as conn:
         result = await conn.execute(Tasks.select().where(Tasks.c.id == task_id))
         data = await result.fetchone()
-        task = dict(data) if data else {}  # TODO 404
+        if data:
+            task = dict(data)
+        else:
+            raise sanic.exceptions.abort(404)
     return json({'task': task})
 
 
@@ -82,8 +87,31 @@ async def delete_task(request, task_id):
             await conn.connection.commit()
         except pymysql.Error as err:
             errors = err.args[1]
-            status_code = 400
+            status_code = 404
     return json({'errors': errors}, status_code)
+
+
+@app.route('/todo/tasks/<task_id:int>', methods=['PUT'])
+async def update_task(request, task_id):
+    errors = ''
+    status_code = 200
+    task = None
+    form = TaskUpdateForm().load(request.json)
+    if not form.errors:
+        async with app.engine.acquire() as conn:
+            try:
+                query = await conn.execute(Tasks.select().where(Tasks.c.id == task_id))
+                task = await query.fetchone()
+                await conn.execute(Tasks.update().where(Tasks.c.id == task_id).\
+                                   values({k: v for k, v in form.data.items()}))
+                await conn.connection.commit()
+            except pymysql.Error as err:
+                errors = err.args[1]
+                status_code = 400
+    if not task:
+        errors = 'Not Found'
+        status_code=404
+    return json({'errors': errors}, status=status_code)
 
 
 if __name__ == '__main__':

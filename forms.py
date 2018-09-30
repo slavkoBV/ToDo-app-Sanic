@@ -7,3 +7,9 @@ class TaskForm(Schema):
     title = fields.Str(required=True)
     description = fields.Str(required=True)
     status = fields.Str(validate=OneOf(['To Do', 'In Progress', 'Review', 'Done']))
+
+
+class TaskUpdateForm(Schema):
+    title = fields.Str(required=False)
+    description = fields.Str(required=False)
+    status = fields.Str(validate=OneOf(['To Do', 'In Progress', 'Review', 'Done']), required=False)
