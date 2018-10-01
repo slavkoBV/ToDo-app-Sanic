@@ -1,7 +1,6 @@
 # ToDo app
 
 ToDo list RESTful application
-framework
 
 ## Built with
 * [Sanic](https://sanic.readthedocs.io/en/latest/) - The Flask-like Python 3.5+ web server
