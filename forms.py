@@ -4,12 +4,12 @@ from marshmallow.validate import OneOf
 
 class TaskForm(Schema):
     id = fields.Integer(required=False)
-    title = fields.Str(required=True)
-    description = fields.Str(required=True)
-    status = fields.Str(validate=OneOf(['To Do', 'In Progress', 'Review', 'Done']))
+    title = fields.String(required=True)
+    description = fields.String(required=True)
+    status = fields.String(validate=OneOf(['To Do', 'In Progress', 'Review', 'Done']), required=True)
 
 
 class TaskUpdateForm(Schema):
-    title = fields.Str(required=False)
-    description = fields.Str(required=False)
-    status = fields.Str(validate=OneOf(['To Do', 'In Progress', 'Review', 'Done']), required=False)
+    title = fields.String(required=False)
+    description = fields.String(required=False)
+    status = fields.String(validate=OneOf(['To Do', 'In Progress', 'Review', 'Done']), required=False)

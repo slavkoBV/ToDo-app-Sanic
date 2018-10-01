@@ -33,10 +33,7 @@ async def get_tasks(request):
     async with app.engine.acquire() as conn:
         result = await conn.execute(Tasks.select())
         data = await result.fetchall()
-        if data:
-            tasks = [dict(task) for task in data]
-        else:
-            raise sanic.exceptions.abort(404)
+        tasks = [dict(task) for task in data] if data else {}
     return json({'tasks': tasks})
 
 
@@ -57,23 +54,22 @@ async def get_task_by_id(request, task_id):
 async def create_task(request):
     errors = None
     status_code = 204
-    try:
-        form = TaskForm().load(request.json)
-        if not form.errors:
-            async with app.engine.acquire() as conn:
-                try:
-                    await conn.execute(Tasks.insert(),
-                                       id=None,
-                                       title=form.data['title'],
-                                       description=form.data['description'],
-                                       status=form.data['status'])
-                    await conn.connection.commit()
-                except pymysql.Error as err:
-                    errors = err.args[1]
-                    status_code = 400
-    except (sanic.exceptions.SanicException, ValidationError) as err:
+    form = TaskForm().load(request.json)
+    if not form.errors:
+        async with app.engine.acquire() as conn:
+                    try:
+                        await conn.execute(Tasks.insert(),
+                                           id=None,
+                                           title=form.data['title'],
+                                           description=form.data['description'],
+                                           status=form.data['status'])
+                        await conn.connection.commit()
+                    except pymysql.Error as err:
+                        errors = err.args[1]
+                        status_code = 400
+    else:
+        errors = form.errors
         status_code = 400
-        errors = err.args[1]
     return json({'errors': errors}, status=status_code)
 
 
