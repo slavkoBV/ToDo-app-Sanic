@@ -56,7 +56,7 @@ async def get_task_by_id(request, task_id):
 @app.route('/todo/tasks/', methods=['POST'])
 async def create_task(request):
     errors = None
-    status_code = 204
+    status_code = 201
     try:
         form = TaskForm().load(request.json)
         if not form.errors:
