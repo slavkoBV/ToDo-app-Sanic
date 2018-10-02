@@ -1,10 +1,6 @@
 from sanic import Sanic
 from sanic.response import json
-import sanic.exceptions
-
 from aiomysql.sa import create_engine
-import pymysql
-from marshmallow import ValidationError
 
 from forms import TaskForm, TaskUpdateForm
 from models import Tasks
@@ -29,71 +25,70 @@ async def db_close(app, loop):
 
 @app.route('/todo/tasks/', methods=['GET'])
 async def get_tasks(request):
-    tasks = {}
     async with app.engine.acquire() as conn:
         result = await conn.execute(Tasks.select())
         data = await result.fetchall()
-        if data:
-            tasks = [dict(task) for task in data]
-        else:
-            raise sanic.exceptions.abort(404)
+        tasks = [dict(task) for task in data] if data else {}
     return json({'tasks': tasks})
 
 
 @app.route('/todo/tasks/<task_id:int>', methods=['GET'])
 async def get_task_by_id(request, task_id):
     task = None
+    errors = None
+    status_code = 200
     async with app.engine.acquire() as conn:
         result = await conn.execute(Tasks.select().where(Tasks.c.id == task_id))
         data = await result.fetchone()
         if data:
             task = dict(data)
         else:
-            raise sanic.exceptions.abort(404)
-    return json({'task': task})
+            errors = 'Not Found'
+            status_code = 404
+    return json({'task': task, 'errors': errors}, status=status_code)
 
 
 @app.route('/todo/tasks/', methods=['POST'])
 async def create_task(request):
     errors = None
-    status_code = 201
+    status_code = 204
     try:
         form = TaskForm().load(request.json)
         if not form.errors:
             async with app.engine.acquire() as conn:
                 try:
                     await conn.execute(Tasks.insert(),
+=======
+    status_code = 204
+    form = TaskForm().load(request.json)
+    if not form.errors:
+        async with app.engine.acquire() as conn:
+            await conn.execute(Tasks.insert(),
+>>>>>>> fc298e2d12b0b2c925bbfd5804a1eccd67a73293
                                        id=None,
                                        title=form.data['title'],
                                        description=form.data['description'],
                                        status=form.data['status'])
-                    await conn.connection.commit()
-                except pymysql.Error as err:
-                    errors = err.args[1]
-                    status_code = 400
-    except (sanic.exceptions.SanicException, ValidationError) as err:
+            await conn.connection.commit()
+    else:
+        errors = form.errors
         status_code = 400
-        errors = err.args[1]
     return json({'errors': errors}, status=status_code)
 
 
 @app.route('todo/tasks/<task_id:int>', methods=['DELETE'])
 async def delete_task(request, task_id):
     errors = ''
-    task = None
     status_code = 202
     async with app.engine.acquire() as conn:
-        try:
-            query = await conn.execute(Tasks.select().where(Tasks.c.id == task_id))
-            task = await query.fetchone()
+        query = await conn.execute(Tasks.select().where(Tasks.c.id == task_id))
+        task = await query.fetchone()
+        if task:
             await conn.execute(Tasks.delete().where(Tasks.c.id == task_id))
             await conn.connection.commit()
-        except pymysql.Error as err:
-            errors = err.args[1]
-            status_code = 400
-    if not task:
-        status_code = 404
-        errors = 'Not Found'
+        else:
+            status_code = 404
+            errors = 'Not Found'
     return json({'errors': errors}, status_code)
 
 
@@ -101,22 +96,21 @@ async def delete_task(request, task_id):
 async def update_task(request, task_id):
     errors = ''
     status_code = 200
-    task = None
     form = TaskUpdateForm().load(request.json)
     if not form.errors:
         async with app.engine.acquire() as conn:
-            try:
-                query = await conn.execute(Tasks.select().where(Tasks.c.id == task_id))
-                task = await query.fetchone()
+            query = await conn.execute(Tasks.select().where(Tasks.c.id == task_id))
+            task = await query.fetchone()
+            if task:
                 await conn.execute(Tasks.update().where(Tasks.c.id == task_id).\
-                                   values({k: v for k, v in form.data.items()}))
+                                  values({k: v for k, v in form.data.items()}))
                 await conn.connection.commit()
-            except pymysql.Error as err:
-                errors = err.args[1]
-                status_code = 400
-    if not task:
-        errors = 'Not Found'
-        status_code=404
+            else:
+                errors = 'Not Found'
+                status_code = 404
+    else:
+        status_code = 400
+        errors = form.errors
     return json({'errors': errors}, status=status_code)
 
 
