@@ -51,24 +51,15 @@ async def get_task_by_id(request, task_id):
 @app.route('/todo/tasks/', methods=['POST'])
 async def create_task(request):
     errors = None
-    status_code = 204
-    try:
-        form = TaskForm().load(request.json)
-        if not form.errors:
-            async with app.engine.acquire() as conn:
-                try:
-                    await conn.execute(Tasks.insert(),
-=======
-    status_code = 204
+    status_code = 201
     form = TaskForm().load(request.json)
     if not form.errors:
         async with app.engine.acquire() as conn:
             await conn.execute(Tasks.insert(),
->>>>>>> fc298e2d12b0b2c925bbfd5804a1eccd67a73293
-                                       id=None,
-                                       title=form.data['title'],
-                                       description=form.data['description'],
-                                       status=form.data['status'])
+                               id=None,
+                               title=form.data['title'],
+                               description=form.data['description'],
+                               status=form.data['status'])
             await conn.connection.commit()
     else:
         errors = form.errors
