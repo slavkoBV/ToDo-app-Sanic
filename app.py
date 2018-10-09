@@ -1,9 +1,14 @@
 from sanic import Sanic
-from sanic.response import json
+from sanic import response
 from aiomysql.sa import create_engine
 
 from forms import TaskForm, TaskUpdateForm
 from models import Tasks
+
+import json
+
+from keep_helper import KeepAPIClient
+from env_settings import KEEP_USERNAME, KEEP_PASSWORD
 
 
 app = Sanic('todo_app')
@@ -29,7 +34,7 @@ async def get_tasks(request):
         result = await conn.execute(Tasks.select())
         data = await result.fetchall()
         tasks = [dict(task) for task in data] if data else {}
-    return json({'tasks': tasks})
+    return response.json({'tasks': tasks})
 
 
 @app.route('/todo/tasks/<task_id:int>', methods=['GET'])
@@ -45,7 +50,7 @@ async def get_task_by_id(request, task_id):
         else:
             errors = 'Not Found'
             status_code = 404
-    return json({'task': task, 'errors': errors}, status=status_code)
+    return response.json({'task': task, 'errors': errors}, status=status_code)
 
 
 @app.route('/todo/tasks/', methods=['POST'])
@@ -64,7 +69,7 @@ async def create_task(request):
     else:
         errors = form.errors
         status_code = 400
-    return json({'errors': errors}, status=status_code)
+    return response.json({'errors': errors}, status=status_code)
 
 
 @app.route('todo/tasks/<task_id:int>', methods=['DELETE'])
@@ -80,7 +85,7 @@ async def delete_task(request, task_id):
         else:
             status_code = 404
             errors = 'Not Found'
-    return json({'errors': errors}, status_code)
+    return response.json({'errors': errors}, status_code)
 
 
 @app.route('/todo/tasks/<task_id:int>', methods=['PUT'])
@@ -102,7 +107,24 @@ async def update_task(request, task_id):
     else:
         status_code = 400
         errors = form.errors
-    return json({'errors': errors}, status=status_code)
+    return response.json({'errors': errors}, status=status_code)
+
+
+@app.route('/todo/tasks/sync', methods=['GET'])
+async def sync_tasks_to_keep(request):
+    errors = None
+    status_code = 200
+    async with app.engine.acquire() as conn:
+        result = await conn.execute(Tasks.select())
+        data = await result.fetchall()
+        try:
+            tasks = [dict(task) for task in data]
+            nodes = [(task['title'], True if task['status'] == 'Done' else False) for task in tasks]
+            keep = KeepAPIClient(KEEP_USERNAME, KEEP_PASSWORD)
+            keep.sync_todo_list(nodes)
+        except Exception as err:
+            errors = err
+    return response.json({'errors': errors}, status_code)
 
 
 if __name__ == '__main__':
