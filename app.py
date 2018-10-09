@@ -121,7 +121,7 @@ async def sync_tasks_to_keep(request):
             tasks = [dict(task) for task in data]
             nodes = [(task['title'], True if task['status'] == 'Done' else False) for task in tasks]
             keep = KeepAPIClient(KEEP_USERNAME, KEEP_PASSWORD)
-            keep.sync_todo_list(nodes)
+            await keep.sync_todo_list(nodes)
         except Exception as err:
             errors = err
     return response.json({'errors': errors}, status_code)

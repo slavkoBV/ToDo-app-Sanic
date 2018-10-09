@@ -3,7 +3,6 @@
 # To unblock access to Google Account from web-browser
 # click Next on https://accounts.google.com/b/0/DisplayUnlockCaptcha
 
-from typing import List
 import gkeepapi
 
 
@@ -13,17 +12,18 @@ class KeepAPIClient:
         if username and password:
             self.keep.login(username, password)
 
-    def get_list_by_title(self, title):
+    async def get_list_by_title(self, title):
         lst = [i for i in self.keep.all() if i.title == title]
         return lst[0] if len(lst) > 0 else []
 
-    def sync_todo_list(self, tasks:List[(str, bool)]):
+    async def sync_todo_list(self, tasks):
         """Synchronize Google Keep ToDo_list with tasks table from database
 
-        :param tasks: list of tasks from database
+        :param tasks: list of tasks [(task.title, task.checked)]
+        task.checked = True if task.status is 'Done', otherwise False
         :return: None
         """
-        lst = self.get_list_by_title('ToDo')
+        lst = await self.get_list_by_title('ToDo')
         if not isinstance(lst, gkeepapi.node.List):
             self.keep.createList('ToDo', tasks)
             self.keep.sync()
