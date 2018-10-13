@@ -29,16 +29,19 @@ class KeepAPIClient:
             self.keep.sync()
         else:
             items = [(item.text, item.checked) for item in lst.items]
+            items_titles = [item.text for item in lst.items]
+            tasks_titles = [task[0] for task in tasks]
+
             new_tasks = list(set(tasks) - set(items))
-            deleted_tasks = list(set(items) - set(tasks))
+            deleted_tasks = list(set(items_titles) - set(tasks_titles))
             for task in new_tasks:
-                if task[0] in [item[0] for item in items]:
+                if task[0] in items_titles:
                     for item in lst.items:
                         if (item.text == task[0]) and (item.checked != task[1]):
                             item.checked = task[1]
                 else:
-                    lst.add(task)
+                    lst.add(*task)
             for item in lst.items:
-                if item.text in [task[0] for task in deleted_tasks]:
+                if item.text in deleted_tasks:
                     item.delete()
             self.keep.sync()
