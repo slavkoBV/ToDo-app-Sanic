@@ -23,15 +23,14 @@ class KeepAPIClient:
         task.checked = True if task.status is 'Done', otherwise False
         :return: None
         """
-        lst = await self.get_list_by_title('ToDo')
+        lst = await self.get_list_by_title('ToDo')  # Only one ToDo_list for one user
         if not isinstance(lst, gkeepapi.node.List):
             self.keep.createList('ToDo', tasks)
             self.keep.sync()
         else:
-            items = [(item.text, item.checked) for item in lst.items]
+            items = [(item.text, item.checked) for item in lst.items]  # Items in Google Keep TodoList
             items_titles = [item.text for item in lst.items]
             tasks_titles = [task[0] for task in tasks]
-
             new_tasks = list(set(tasks) - set(items))
             deleted_tasks = list(set(items_titles) - set(tasks_titles))
             for task in new_tasks:
