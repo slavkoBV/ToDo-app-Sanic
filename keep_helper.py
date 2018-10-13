@@ -28,12 +28,17 @@ class KeepAPIClient:
             self.keep.createList('ToDo', tasks)
             self.keep.sync()
         else:
-            res = list(set(tasks) - set([(item.text, item.checked) for item in lst.items]))
-            for task in res:
-                if task[0] in [item.text for item in lst.items]:
+            items = [(item.text, item.checked) for item in lst.items]
+            new_tasks = list(set(tasks) - set(items))
+            deleted_tasks = list(set(items) - set(tasks))
+            for task in new_tasks:
+                if task[0] in [item[0] for item in items]:
                     for item in lst.items:
                         if (item.text == task[0]) and (item.checked != task[1]):
                             item.checked = task[1]
                 else:
                     lst.add(task)
+            for item in lst.items:
+                if item.text in [task[0] for task in deleted_tasks]:
+                    item.delete()
             self.keep.sync()
