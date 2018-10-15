@@ -5,8 +5,6 @@ from aiomysql.sa import create_engine
 from forms import TaskForm, TaskUpdateForm
 from models import Tasks
 
-import json
-
 from keep_helper import KeepAPIClient
 from env_settings import KEEP_USERNAME, KEEP_PASSWORD
 
