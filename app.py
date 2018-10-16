@@ -6,11 +6,12 @@ from forms import TaskForm, TaskUpdateForm
 from models import Tasks
 
 from keep_helper import KeepAPIClient
+from config import Config
 from env_settings import KEEP_USERNAME, KEEP_PASSWORD
 
 
 app = Sanic('todo_app')
-app.config.from_pyfile('config.py')
+app.config.from_object(Config)
 
 
 @app.listener('before_server_start')

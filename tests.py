@@ -1,24 +1,20 @@
 from asynctest import TestCase
 from app import app
-
-
-tasks = [
-    {
-        'id': 1,
-        'title': 'test_task',
-        'description': 'test',
-        'status': 'Done'
-    },
-    {
-        'id': 2,
-        'title': 'test2',
-        'description': 'test2',
-        'status': 'In Progress'
-    }
-]
+from config import TestingConfig
+from aiomysql.sa import create_engine
 
 
 class TestTodoApp(TestCase):
+
+    def setUp(self):
+        app.config.from_object(TestingConfig)
+        app.engine = create_engine(user=app.config.DB_USER,
+                                   db=app.config.DB_NAME,
+                                   host=app.config.DB_HOST,
+                                   password=app.config.DB_PASSWORD)
+
+    def tearDown(self):
+        app.engine.close()
 
     def test_get_tasks(self):
         response = app.test_client.get('/todo/tasks', gather_request=False)
