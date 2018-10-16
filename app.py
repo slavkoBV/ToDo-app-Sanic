@@ -60,7 +60,7 @@ async def create_task(request):
     if not form.errors:
         async with app.engine.acquire() as conn:
             await conn.execute(Tasks.insert(),
-                               id=None,
+                               id=form.data.get('id', None),
                                title=form.data['title'],
                                description=form.data['description'],
                                status=form.data['status'])

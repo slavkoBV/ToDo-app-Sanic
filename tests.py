@@ -9,11 +9,13 @@ from models import Tasks
 
 tasks = [
     {
+        'id': 1,
         'title': 'test1',
         'description': 'test1',
         'status': 'In Progress'
     },
     {
+        'id': 2,
         'title': 'test2',
         'description': 'test2',
         'status': 'Done'
@@ -24,6 +26,7 @@ tasks = [
 class TestTodoApp(TestCase):
 
     def setUp(self):
+        """Connect to test_db, which must be created manually"""
         app.config.from_object(TestingConfig)
         app.engine = create_engine("mysql+pymysql://{user}:{password}@{host}/{db}".format(
                                                                                   user=app.config.DB_USER,
@@ -33,13 +36,14 @@ class TestTodoApp(TestCase):
         with app.engine.connect() as conn:
             for task in tasks:
                 conn.execute(Tasks.insert(),
-                             id=None,
+                             id=task['id'],
                              title=task['title'],
                              description=task['description'],
                              status=task['status']
                              )
 
     def tearDown(self):
+        """Clear test_db"""
         app.engine = create_engine("mysql+pymysql://{user}:{password}@{host}/{db}".format(
                                                                                     user=app.config.DB_USER,
                                                                                     db=app.config.DB_NAME,
@@ -59,6 +63,7 @@ class TestTodoApp(TestCase):
 
     def test_create_task(self):
         data = {
+            'id': 3,
             'title': 'test_create_task',
             'description': 'test_create_description',
             'status': 'Done'
