@@ -7,6 +7,9 @@ from sqlalchemy import create_engine
 from models import Tasks
 
 
+app.config.from_object(TestingConfig)
+
+# test data
 tasks = [
     {
         'id': 1,
@@ -26,14 +29,16 @@ tasks = [
 class TestTodoApp(TestCase):
 
     def setUp(self):
-        """Connect to test_db, which must be created manually"""
-        app.config.from_object(TestingConfig)
+        """Connect to test_db, which must be created manually. Table tasks also must be created manually.
+         Primary Key (id) must not be auto increment."""
+
         app.engine = create_engine("mysql+pymysql://{user}:{password}@{host}/{db}".format(
-                                                                                  user=app.config.DB_USER,
-                                                                                  db=app.config.DB_NAME,
-                                                                                  host=app.config.DB_HOST,
-                                                                                  password=app.config.DB_PASSWORD))
+                                                                                       user=app.config.DB_USER,
+                                                                                       db=app.config.DB_NAME,
+                                                                                       host=app.config.DB_HOST,
+                                                                                       password=app.config.DB_PASSWORD))
         with app.engine.connect() as conn:
+            # Fill test_db with test data
             for task in tasks:
                 conn.execute(Tasks.insert(),
                              id=task['id'],
@@ -43,7 +48,7 @@ class TestTodoApp(TestCase):
                              )
 
     def tearDown(self):
-        """Clear test_db"""
+        """Clear test_db (Delete all row in tasks table)"""
         app.engine = create_engine("mysql+pymysql://{user}:{password}@{host}/{db}".format(
                                                                                     user=app.config.DB_USER,
                                                                                     db=app.config.DB_NAME,
@@ -56,6 +61,10 @@ class TestTodoApp(TestCase):
         response = app.test_client.get('/todo/tasks', gather_request=False)
         self.assertEqual(response.status, 200)
         self.assertTrue('tasks' in response.body.decode())
+
+    def test_get_task_by_id(self):
+        response = app.test_client.get('/todo/tasks/1', gather_request=False)
+        self.assertEqual(response.status, 200)
 
     def test_get_404_for_incorrect_task_id(self):
         response = app.test_client.get('/todo/tasks/3454654434', gather_request=False)
@@ -70,3 +79,28 @@ class TestTodoApp(TestCase):
             }
         response = app.test_client.post('/todo/tasks', data=json.dumps(data), gather_request=False)
         self.assertEqual(response.status, 201)
+
+    def test_update_task(self):
+        data = {
+            'id': 2,
+            'title': 'change_title'
+        }
+        response = app.test_client.put('/todo/tasks/{}'.format(data['id']), data=json.dumps(data), gather_request=False)
+        app.engine = create_engine("mysql+pymysql://{user}:{password}@{host}/{db}".format(
+                                                                                    user=app.config.DB_USER,
+                                                                                    db=app.config.DB_NAME,
+                                                                                    host=app.config.DB_HOST,
+                                                                                    password=app.config.DB_PASSWORD))
+        with app.engine.connect() as conn:
+            res = conn.execute(Tasks.select().where(Tasks.c.id == data['id']))
+            result = res.fetchone()
+        self.assertEqual(response.status, 200)
+        self.assertEqual(result['id'], data['id'])
+
+    def test_update_task_with_incorrect_id(self):
+        data = {
+            'id': 5,
+            'title': 'test'
+        }
+        response = app.test_client.put('/todo/tasks/{}'.format(data['id']), data=json.dumps(data), gather_request=False)
+        self.assertEqual(response.status, 404)
