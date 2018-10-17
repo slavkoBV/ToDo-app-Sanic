@@ -1,11 +1,10 @@
 import json
-from asynctest import TestCase
+from asynctest import TestCase, patch, CoroutineMock
 from app import app
 from config import TestingConfig
 from sqlalchemy import create_engine
 
 from models import Tasks
-
 
 app.config.from_object(TestingConfig)
 
@@ -60,7 +59,7 @@ class TestTodoApp(TestCase):
     def test_get_tasks(self):
         response = app.test_client.get('/todo/tasks', gather_request=False)
         self.assertEqual(response.status, 200)
-        self.assertTrue('tasks' in response.body.decode())
+        self.assertEqual(len(response.json['tasks']), 2)
 
     def test_get_task_by_id(self):
         response = app.test_client.get('/todo/tasks/1', gather_request=False)
@@ -104,3 +103,11 @@ class TestTodoApp(TestCase):
         }
         response = app.test_client.put('/todo/tasks/{}'.format(data['id']), data=json.dumps(data), gather_request=False)
         self.assertEqual(response.status, 404)
+
+    @patch("keep_helper.KeepAPIClient.sync_todo_list", new_callable=CoroutineMock)
+    @patch("keep_helper.KeepAPIClient.__init__")
+    def test_sync_to_keep(self, mock_init, mock_sync ):
+        mock_init.return_value = None
+        response = app.test_client.get('/todo/tasks/sync', gather_request=False)
+        self.assertEqual(response.status, 200)
+        mock_sync.assert_awaited_once()

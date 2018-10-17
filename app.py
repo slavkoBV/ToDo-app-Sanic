@@ -123,6 +123,7 @@ async def sync_tasks_to_keep(request):
             await keep.sync_todo_list(nodes)
         except Exception as err:
             errors = err
+            status_code = 204
     return response.json({'errors': errors}, status_code)
 
 
