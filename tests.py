@@ -110,4 +110,5 @@ class TestTodoApp(TestCase):
         mock_init.return_value = None
         response = app.test_client.get('/todo/tasks/sync', gather_request=False)
         self.assertEqual(response.status, 200)
-        mock_sync.assert_awaited_once()
+        nodes = [(task['title'], True if task['status'] == 'Done' else False) for task in tasks]
+        mock_sync.assert_awaited_once_with(nodes)
