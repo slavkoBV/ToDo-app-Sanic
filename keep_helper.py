@@ -6,35 +6,52 @@
 import gkeepapi
 
 
+class AuthException(gkeepapi.exception.LoginException):
+    def __init__(self, message):
+        super().__init__(message)
+
+
 class KeepAPIClient:
     def __init__(self, username, password):
         self.keep = gkeepapi.Keep()
-        if username and password:
+        try:
             self.keep.login(username, password)
+        except gkeepapi.exception.LoginException:
+            raise AuthException('User is unauthorised')
 
     async def get_list_by_title(self, title):
         lst = [i for i in self.keep.all() if i.title == title]
         return lst[0] if len(lst) > 0 else []
 
-    async def sync_todo_list(self, tasks):
-        """Synchronize Google Keep ToDo_list with tasks table from database
+    async def get_new_tasks(self, tasks, items):
+        """Return list of new tasks, that not in Google Keep items
+        or tasks which status is changed.
 
-        :param tasks: list of tasks [(task.title, task.checked)]
-        task.checked = True if task.status is 'Done', otherwise False
-        :return: None
+        Args:
+            tasks: list of tasks from database [(task.title, task.status)]
+            items: dictionary of items from Google Keep {item.text, item.checked}
         """
+        keep_items = set([(text, checked) for text, checked in items.items()])
+        return list(set(tasks) - set(keep_items))
+
+    async def sync_todo_list(self, tasks):
+        """Synchronize Google Keep ToDo_list with tasks from database.
+
+        Args:
+            tasks: list of tasks [(task.title, task.status)]
+            task.checked = True if task.status is 'Done', otherwise False
+        """
+
         lst = await self.get_list_by_title('ToDo')  # Only one ToDo_list for one user
         if not isinstance(lst, gkeepapi.node.List):
             self.keep.createList('ToDo', tasks)
             self.keep.sync()
         else:
-            items = [(item.text, item.checked) for item in lst.items]  # Items in Google Keep TodoList
-            items_titles = [item.text for item in lst.items]
-            tasks_titles = [task[0] for task in tasks]
-            new_tasks = list(set(tasks) - set(items))
-            deleted_tasks = list(set(items_titles) - set(tasks_titles))
+            items = {item.text: item.checked for item in lst.items}
+            new_tasks = await self.get_new_tasks(tasks, items)
+            deleted_tasks = list(set(items.keys()) - set([task[0] for task in tasks]))
             for task in new_tasks:
-                if task[0] in items_titles:
+                if task[0] in items.keys():
                     for item in lst.items:
                         if (item.text == task[0]) and (item.checked != task[1]):
                             item.checked = task[1]

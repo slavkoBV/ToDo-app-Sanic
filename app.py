@@ -5,10 +5,10 @@ from aiomysql.sa import create_engine
 from forms import TaskForm, TaskUpdateForm
 from models import Tasks
 
-from keep_helper import KeepAPIClient
+from keep_helper import KeepAPIClient, AuthException
+
 from config import Config
 from env_settings import KEEP_USERNAME, KEEP_PASSWORD
-
 
 app = Sanic('todo_app')
 app.config.from_object(Config)
@@ -97,8 +97,8 @@ async def update_task(request, task_id):
             query = await conn.execute(Tasks.select().where(Tasks.c.id == task_id))
             task = await query.fetchone()
             if task:
-                await conn.execute(Tasks.update().where(Tasks.c.id == task_id).\
-                                  values({k: v for k, v in form.data.items()}))
+                await conn.execute(Tasks.update().where(Tasks.c.id == task_id). \
+                                   values({k: v for k, v in form.data.items()}))
                 await conn.connection.commit()
             else:
                 errors = 'Not Found'
@@ -116,14 +116,14 @@ async def sync_tasks_to_keep(request):
     async with app.engine.acquire() as conn:
         result = await conn.execute(Tasks.select())
         data = await result.fetchall()
+        tasks = [dict(task) for task in data]
+        nodes = [(task['title'], True if task['status'] == 'Done' else False) for task in tasks]
         try:
-            tasks = [dict(task) for task in data]
-            nodes = [(task['title'], True if task['status'] == 'Done' else False) for task in tasks]
             keep = KeepAPIClient(KEEP_USERNAME, KEEP_PASSWORD)
             await keep.sync_todo_list(nodes)
-        except Exception as err:
-            errors = err
-            status_code = 204
+        except AuthException as err:
+            errors = err.args
+            status_code = 401
     return response.json({'errors': errors}, status_code)
 
 

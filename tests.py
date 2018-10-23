@@ -106,7 +106,7 @@ class TestTodoApp(TestCase):
 
     @patch("keep_helper.KeepAPIClient.sync_todo_list", new_callable=CoroutineMock)
     @patch("keep_helper.KeepAPIClient.__init__")
-    def test_sync_to_keep(self, mock_init, mock_sync ):
+    def test_sync_to_keep(self, mock_init, mock_sync):
         mock_init.return_value = None
         response = app.test_client.get('/todo/tasks/sync', gather_request=False)
         self.assertEqual(response.status, 200)
