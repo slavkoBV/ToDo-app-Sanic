@@ -112,3 +112,7 @@ class TestTodoApp(TestCase):
         self.assertEqual(response.status, 200)
         nodes = [(task['title'], True if task['status'] == 'Done' else False) for task in tasks]
         mock_sync.assert_awaited_once_with(nodes)
+
+    def test_sync_get_401_bad_auth(self):
+        response = app.test_client.get('/todo/tasks/sync', gather_request=False)
+        self.assertEqual(response.status, 401)
