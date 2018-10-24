@@ -23,7 +23,8 @@ class KeepAPIClient:
         lst = [i for i in self.keep.all() if i.title == title]
         return lst[0] if len(lst) > 0 else []
 
-    async def get_new_tasks(self, tasks, items):
+    @staticmethod
+    async def get_new_tasks(tasks, items):
         """Return list of new tasks, that not in Google Keep items
         or tasks which status is changed.
 
@@ -32,7 +33,7 @@ class KeepAPIClient:
             items: dictionary of items from Google Keep {item.text, item.checked}
         """
         keep_items = set((text, checked) for text, checked in items.items())
-        return list(set(tasks) - keep_items)
+        return [task for task in tasks if task not in keep_items]
 
     async def sync_todo_list(self, tasks):
         """Synchronize Google Keep ToDo_list with tasks from database.
