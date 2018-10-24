@@ -31,8 +31,8 @@ class KeepAPIClient:
             tasks: list of tasks from database [(task.title, task.status)]
             items: dictionary of items from Google Keep {item.text, item.checked}
         """
-        keep_items = set([(text, checked) for text, checked in items.items()])
-        return list(set(tasks) - set(keep_items))
+        keep_items = set((text, checked) for text, checked in items.items())
+        return list(set(tasks) - keep_items)
 
     async def sync_todo_list(self, tasks):
         """Synchronize Google Keep ToDo_list with tasks from database.
