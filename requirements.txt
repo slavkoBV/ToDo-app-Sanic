@@ -13,7 +13,7 @@ gpsoauth==0.4.1
 httptools==0.0.11
 idna==2.7
 jeepney==0.4
-Mako==1.0.7
+Mako==1.2.2
 MarkupSafe==1.0
 marshmallow==2.15.6
 multidict==4.4.2
